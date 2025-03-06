@@ -1,6 +1,7 @@
 import pytest 
 from exceptions import InvalidBoard
 from solver import SudokuSolver
+from copy import deepcopy
 
 # Fix a valid board
 valid_board = [
@@ -97,3 +98,64 @@ def test_fill_bags(sudoku):
     assert len(c_bags[6]) == 1
     assert len(b_bags[4]) == 4
     assert len(b_bags[8]) == 5
+
+def test_make_and_undo_move(sudoku):
+    initial_board = deepcopy(sudoku.board)
+
+    sudoku.make_move((0,2,2))
+    assert sudoku.board[0][2] == 2
+    assert 2 in sudoku.row_bags[0]
+    assert 2 in sudoku.col_bags[2]
+    assert 2 in sudoku.box_bags[0]
+
+
+    sudoku.make_move((8,5,1))
+    assert sudoku.board[8][5] == 1
+    assert 1 in sudoku.row_bags[8]
+    assert 1 in sudoku.col_bags[5]
+    assert 1 in sudoku.box_bags[7]
+
+    sudoku.undo_move((8,5,1))
+    sudoku.undo_move((0,2,2))
+    assert sudoku.board[8][5] is None
+    assert sudoku.board[0][2] is None
+
+    assert 1 not in sudoku.row_bags[8]
+    assert 1 not in sudoku.col_bags[5]
+    assert 1 not in sudoku.box_bags[7]
+    assert 2 not in sudoku.row_bags[0]
+    assert 2 not in sudoku.col_bags[2]
+    assert 2 not in sudoku.box_bags[0]
+
+    assert initial_board == sudoku.board
+
+def test_get_valid_moves(sudoku):
+    valid_moves = sudoku.get_all_valid_moves()
+
+    num_none_cells = sum(cell is None for row in sudoku.board for cell in row)
+    assert len(valid_moves) == num_none_cells
+
+    assert len(valid_moves[(2,0)]) == 2
+    assert len(valid_moves[(8,2)]) == 5
+    assert (0,0) not in valid_moves
+    assert (7,5) not in valid_moves
+
+    # Making moves changes available moves
+    sudoku.make_move((6,0,1))
+    sudoku.make_move((7,0,2))
+    valid_moves = sudoku.get_all_valid_moves()
+    assert (2,0) not in valid_moves
+
+    # Undoing moves changes available moves
+    sudoku.undo_move((6,0,1))
+    valid_moves = sudoku.get_all_valid_moves()
+    assert len(valid_moves[(2,0)]) == 1
+
+
+
+
+
+
+
+
+

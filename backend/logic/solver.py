@@ -1,5 +1,6 @@
 import numpy as np
 from math import floor
+
 from exceptions import InvalidBoard, UnsolvableBoard
 
 class SudokuSolver(object):
@@ -10,27 +11,29 @@ class SudokuSolver(object):
                   for a 9 by 9 board.
         Precondition: k and m must fully divide n 
         """
-        self.size = len(board)
+        self.board_size = len(board)
         self.box_width,self.box_height = box_dims
-        assert self.size == self.box_height * self.box_width, "Board size must be valid (perfect square)"
+        assert self.board_size == self.box_height * self.box_width, "Board size must be valid (perfect square)"
         if not self._is_valid_board(board, box_dims):
             raise InvalidBoard("Invalid Board")
 
         self.board = board
-        self.row_bags = [set() for _ in range(self.size)]
-        self.col_bags = [set() for _ in range( self.size)] 
-        self.box_bags = [set() for _ in range ( int((self.size / self.box_height) * (self.size / self.box_width)))]  
+        self.move_options= set(range(1, self.board_size + 1))
+        self.row_bags = [set() for _ in range(self.board_size)]
+        self.col_bags = [set() for _ in range( self.board_size)] 
+        self.box_bags = [set() for _ in range ( int((self.board_size / self.box_height) * (self.board_size / self.box_width)))] 
+        self.valid_moves = {}
         self.fill_bags()
 
     def get_box_idx(self, cell):
         r, c = cell
-        boxes_across = self.size / self.box_width
-        boxes_down = self.size / self.box_height
+        boxes_across = self.board_size / self.box_width
+        boxes_down = self.board_size / self.box_height
         return int((floor(r // boxes_down)) * boxes_across) + floor(c // boxes_across)
 
     def fill_bags(self):
-        for row in range(self.size):
-            for col in range(self.size):
+        for row in range(self.board_size):
+            for col in range(self.board_size):
                 cell = self.board[row][col]
                 if cell is not None: 
                     self.row_bags[row].add(cell)
@@ -79,4 +82,46 @@ class SudokuSolver(object):
                 self.check_rows(b_transposed) and
                 self.check_boxes(board, box_dims)
         )
+
+    def make_move(self, move):
+        i, j, digit = move
+        box_idx = self.get_box_idx((i,j))
+
+        self.board[i][j] = digit
+        self.row_bags[i].add(digit)
+        self.col_bags[j].add(digit)
+        self.box_bags[box_idx].add(digit)
+        
+    def undo_move(self, move):
+        i, j, digit = move
+        box_idx = self.get_box_idx((i,j))
+
+        self.board[i][j] = None
+        self.row_bags[i].remove(digit)
+        self.col_bags[j].remove(digit)
+        self.box_bags[box_idx].remove(digit)
+
+    def get_valid_cell_moves(self, cell):
+        i, j = cell
+        box_idx = self.get_box_idx((i,j))
+
+        row_bag = self.row_bags[i]
+        col_bag = self.col_bags[j]
+        box_bag = self.box_bags[box_idx]
+        moves = set(self.move_options - (row_bag | col_bag | box_bag))
+        return moves
+
+    def get_all_valid_moves(self):
+        valid_moves = {}
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if self.board[i][j] is None:
+                    moves = self.get_valid_cell_moves((i,j))
+                    if moves:
+                        valid_moves[(i,j)] = moves
+        return valid_moves
+
+
+
+
     

@@ -1,7 +1,10 @@
 import pytest 
-from exceptions import InvalidBoard
-from solver import SudokuSolver
 from copy import deepcopy
+from sudoku import Sudoku
+import numpy as np
+
+from exceptions import InvalidBoard, UnsolvableBoard
+from solver import SudokuSolver
 
 # Fix a valid board
 valid_board = [
@@ -15,8 +18,33 @@ valid_board = [
     [None, None, None, 4, 1, 9, None, None, 5],
     [None, None, None, None, 8, None, None, 7, 9]
 ]
-box_dims = (3, 3)
 
+solved_board = [
+    [5, 8, 4, 1, 3, 7, 6, 2, 9],
+    [2, 1, 7, 8, 6, 9, 3, 5, 4],
+    [3, 9, 6, 2, 5, 4, 7, 1, 8],
+    [4, 7, 2, 9, 8, 6, 1, 3, 5],
+    [6, 3, 8, 4, 1, 5, 2, 9, 7],
+    [9, 5, 1, 3, 7, 2, 4, 8, 6], 
+    [7, 4, 3, 5, 9, 1, 8, 6, 2],
+    [8, 2, 5, 6, 4, 3, 9, 7, 1],
+    [1, 6, 9, 7, 2, 8, 5, 4, 3]
+]
+
+unsolvable_board = [
+    [5, 8, 9, 1, 3, 7, 6, 2, None], # Should be 9, but it wouldn't be a valid move
+    [2, 1, 7, 8, 6, 9, 3, 5, None], # 4
+    [3, None, 6, 2, 5, 4, 7, 1, 8],
+    [4, 7, 2, 9, 8, 6, 1, 3, 5],
+    [6, 3, 8, 4, 1, 5, 2, 9, 7],
+    [9, 5, 1, 3, 7, 2, 4, 8, 6], 
+    [7, 4, 3, 5, 9, 1, 8, 6, 2],
+    [8, 2, 5, 6, 4, 3, 9, 7, 1],
+    [1, 6, None, 7, 2, 8, 5, 4, 3]
+]
+
+box_dims = (3, 3)
+seed = 100
 
 @pytest.fixture
 def sudoku():
@@ -151,11 +179,54 @@ def test_get_valid_moves(sudoku):
     valid_moves = sudoku.get_all_valid_moves()
     assert len(valid_moves[(2,0)]) == 1
 
+def is_valid_solution(board, box_dims):
+    """
+    Returns whether board is correctly solved
+    """
+    b_size = len(board)
+    box_width, box_height = box_dims
+    
+    board = np.array(board, dtype=object)
+    b_transpose = board.T
+    expected_numbers = set(range(1, b_size + 1))
+
+    def is_expected(numbers):
+        return set(numbers) == expected_numbers
+
+    # Check rows and cols
+    for i in range(b_size):
+        row = board[i]
+        col = b_transpose[i]
+        if not (is_expected(row) and is_expected(col)):
+            return False
+        
+    # Check boxes
+    for start_row in range(0, b_size, box_height):
+        for start_col in range(0, b_size, box_height):
+            box = board[start_row: start_row + box_height, start_col: start_col + box_width].flatten()
+            if not is_expected(box):
+                return False
+    
+    return True
 
 
+def test_solve():
+    # Test solvable boards
+    board = Sudoku(3).difficulty(0.5).board
+    sudoku_solver = SudokuSolver(board, box_dims)
+    solution = sudoku_solver.get_solution()
+    assert is_valid_solution(solution, box_dims)
 
+    board = Sudoku(3).difficulty(0.5).board
+    sudoku_solver = SudokuSolver(board, box_dims)
+    solution = sudoku_solver.get_solution()
+    assert is_valid_solution(solution, box_dims)
 
+    sudoku_solver = SudokuSolver(solved_board, box_dims)
+    solution = sudoku_solver.get_solution()
+    assert is_valid_solution(solution, box_dims)
 
-
-
-
+    # Test unsolvable board
+    sudoku = SudokuSolver(unsolvable_board, box_dims)
+    with pytest.raises(UnsolvableBoard):
+        sudoku.get_solution()

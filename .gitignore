@@ -6,3 +6,11 @@ venv
 
 # Ignore all .pyc files (compiled Python files)
 *.pyc
+
+# dependencies
+frontend/node_modules
+
+# next.js
+frontend/.next/
+frontend/package-lock.json
+

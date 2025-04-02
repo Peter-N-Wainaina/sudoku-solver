@@ -1,3 +1,4 @@
+
 export const metadata = {
     title: 'Sudoku Solver',
     description: 'A smart way to solve Sudoku puzzles',
